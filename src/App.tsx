@@ -3,8 +3,14 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import BottomNav from "@/components/BottomNav";
+import FeedPage from "./pages/FeedPage";
+import RecipeDetailPage from "./pages/RecipeDetailPage";
+import ImportPage from "./pages/ImportPage";
+import ScanPage from "./pages/ScanPage";
+import CookTogetherPage from "./pages/CookTogetherPage";
+import ProfilePage from "./pages/ProfilePage";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -14,11 +20,18 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <div className="max-w-lg mx-auto relative">
+          <Routes>
+            <Route path="/" element={<FeedPage />} />
+            <Route path="/recipe/:id" element={<RecipeDetailPage />} />
+            <Route path="/import" element={<ImportPage />} />
+            <Route path="/scan" element={<ScanPage />} />
+            <Route path="/cook-together" element={<CookTogetherPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <BottomNav />
+        </div>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
