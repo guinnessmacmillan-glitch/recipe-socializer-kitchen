@@ -1,2 +1,2 @@
-import FeedPage from "./FeedPage";
-export default FeedPage;
+import HomePage from "./HomePage";
+export default HomePage;
