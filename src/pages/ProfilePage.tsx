@@ -1,13 +1,14 @@
 import { useNavigate } from "react-router-dom";
-import { Settings, BookOpen, Heart, Import, Camera, Bookmark } from "lucide-react";
+import { Settings, BookOpen, Heart, Import, Camera, Bookmark, Moon, Sun } from "lucide-react";
 import { motion } from "framer-motion";
+import { Switch } from "@/components/ui/switch";
 import raccoonMascot from "@/assets/raccoon-mascot.png";
 import { recipes } from "@/lib/recipe-data";
+import { useTheme } from "@/hooks/use-theme";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-
-  // Mock saved/bookmarked recipes
+  const { theme, toggleTheme } = useTheme();
   const savedRecipes = recipes.slice(0, 3);
 
   return (
@@ -42,7 +43,25 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      {/* Saved / Bookmarked Recipes */}
+      {/* Dark Mode Toggle */}
+      <div className="mb-6 bg-card rounded-xl p-4 border border-border flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {theme === "dark" ? (
+            <Moon className="w-5 h-5 text-foreground" />
+          ) : (
+            <Sun className="w-5 h-5 text-foreground" />
+          )}
+          <div>
+            <span className="text-sm font-display font-semibold text-foreground">Dark Mode</span>
+            <p className="text-xs text-muted-foreground">
+              {theme === "dark" ? "Dark theme active" : "Light theme active"}
+            </p>
+          </div>
+        </div>
+        <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
+      </div>
+
+      {/* Saved Recipes */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-display text-sm font-semibold text-foreground flex items-center gap-1.5">
@@ -60,16 +79,10 @@ const ProfilePage = () => {
               onClick={() => navigate(`/recipe/${recipe.id}`)}
               className="w-full bg-card rounded-xl overflow-hidden border border-border flex items-center text-left hover:border-primary/30 transition-colors"
             >
-              <img
-                src={recipe.image}
-                alt={recipe.title}
-                className="w-16 h-16 object-cover flex-shrink-0"
-              />
+              <img src={recipe.image} alt={recipe.title} className="w-16 h-16 object-cover flex-shrink-0" />
               <div className="p-3 flex-1 min-w-0">
                 <h4 className="font-display font-semibold text-foreground text-sm truncate">{recipe.title}</h4>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {recipe.cookTime} · {recipe.difficulty}
-                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">{recipe.cookTime} · {recipe.difficulty}</p>
               </div>
               <Heart className="w-4 h-4 text-destructive mr-3 flex-shrink-0" />
             </motion.button>
