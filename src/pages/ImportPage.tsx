@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Link2, Upload, Share, Check, Edit3, Loader2 } from "lucide-react";
+import { ArrowLeft, Link2, Upload, Share, Check, Edit3, Loader2, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MascotBubble from "@/components/MascotBubble";
 import { getRandomMascotMessage } from "@/lib/recipe-data";
-import foodFriedRice from "@/assets/food-fried-rice.jpg";
 
 type Step = "input" | "processing" | "confirm" | "done";
 
@@ -16,7 +15,6 @@ const ImportPage = () => {
   const [url, setUrl] = useState("");
   const [editMode, setEditMode] = useState(false);
 
-  // Mock extracted recipe
   const [extracted, setExtracted] = useState({
     title: "Creamy Garlic Shrimp Pasta",
     cookTime: "25 min",
@@ -55,6 +53,16 @@ const ImportPage = () => {
     return "Video";
   };
 
+  const getVideoEmbedUrl = (url: string) => {
+    // YouTube
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+    // For demo/mock URLs, return null
+    return null;
+  };
+
+  const embedUrl = getVideoEmbedUrl(url);
+
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -76,7 +84,6 @@ const ImportPage = () => {
           >
             <MascotBubble message={getRandomMascotMessage("import")} />
 
-            {/* Paste link */}
             <div className="space-y-3">
               <label className="text-sm font-display font-semibold text-foreground flex items-center gap-2">
                 <Link2 className="w-4 h-4 text-primary" /> Paste video link
@@ -91,8 +98,14 @@ const ImportPage = () => {
                 {["TikTok", "Instagram", "YouTube"].map((p) => (
                   <button
                     key={p}
-                    onClick={() => setUrl(`https://${p.toLowerCase()}.com/example`)}
-                    className="text-xs px-3 py-1.5 rounded-full bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary transition-colors"
+                    onClick={() => {
+                      if (p === "YouTube") {
+                        setUrl("https://youtube.com/watch?v=dQw4w9WgXcQ");
+                      } else {
+                        setUrl(`https://${p.toLowerCase()}.com/example`);
+                      }
+                    }}
+                    className="text-xs px-3 py-1.5 rounded-full bg-muted text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                   >
                     {p}
                   </button>
@@ -100,7 +113,6 @@ const ImportPage = () => {
               </div>
             </div>
 
-            {/* Other options */}
             <div className="grid grid-cols-2 gap-3">
               <button className="bg-card rounded-xl p-4 flex flex-col items-center gap-2 border border-border hover:border-primary/50 transition-colors">
                 <Upload className="w-6 h-6 text-primary" />
@@ -115,7 +127,7 @@ const ImportPage = () => {
             <Button
               onClick={handleImport}
               disabled={!url.trim()}
-              className="w-full gradient-warm text-primary-foreground border-0 font-display font-semibold"
+              className="w-full bg-primary text-primary-foreground border-0 font-display font-semibold"
             >
               Import Recipe
             </Button>
@@ -130,7 +142,7 @@ const ImportPage = () => {
             exit={{ opacity: 0 }}
             className="px-4 pt-20 flex flex-col items-center gap-6"
           >
-            <div className="w-20 h-20 rounded-full gradient-warm flex items-center justify-center animate-pulse-glow">
+            <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center animate-pulse-glow">
               <Loader2 className="w-8 h-8 text-primary-foreground animate-spin" />
             </div>
             <div className="text-center space-y-2">
@@ -174,7 +186,30 @@ const ImportPage = () => {
             exit={{ opacity: 0 }}
             className="px-4 space-y-4"
           >
-            <div className="bg-card-elevated rounded-xl p-4 flex items-center gap-3">
+            {/* Embedded video at top */}
+            <div className="rounded-xl overflow-hidden border border-border bg-foreground">
+              {embedUrl ? (
+                <iframe
+                  src={embedUrl}
+                  className="w-full aspect-video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title="Recipe video"
+                />
+              ) : (
+                <div className="w-full aspect-video bg-foreground/5 flex flex-col items-center justify-center gap-2">
+                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Play className="w-6 h-6 text-primary" />
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {getPlatformFromUrl(url)} video preview
+                  </span>
+                  <span className="text-[10px] text-muted-foreground/60 truncate max-w-[80%]">{url}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-card rounded-xl p-4 flex items-center gap-3 border border-border">
               <span className="text-2xl">🤔</span>
               <div>
                 <p className="text-sm font-display font-semibold text-foreground">
@@ -188,13 +223,12 @@ const ImportPage = () => {
                 onClick={() => setEditMode(!editMode)}
                 className="ml-auto p-2 rounded-lg bg-muted"
               >
-                <Edit3 className="w-4 h-4 text-primary" />
+                <Edit3 className="w-4 h-4 text-foreground" />
               </button>
             </div>
 
-            {/* Preview card */}
+            {/* Extracted recipe details */}
             <div className="bg-card rounded-xl overflow-hidden border border-border">
-              <img src={foodFriedRice} alt="Preview" className="w-full h-40 object-cover" />
               <div className="p-4 space-y-3">
                 <input
                   value={extracted.title}
@@ -239,7 +273,7 @@ const ImportPage = () => {
                   </h4>
                   {extracted.steps.map((s, i) => (
                     <div key={i} className="flex gap-2 py-1">
-                      <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] flex items-center justify-center flex-shrink-0 font-bold">
+                      <span className="w-5 h-5 rounded-full bg-secondary text-foreground text-[10px] flex items-center justify-center flex-shrink-0 font-bold">
                         {i + 1}
                       </span>
                       <span className="text-sm text-foreground/80">{s}</span>
@@ -262,7 +296,7 @@ const ImportPage = () => {
               </Button>
               <Button
                 onClick={handleConfirm}
-                className="flex-1 gradient-warm text-primary-foreground border-0 font-display font-semibold"
+                className="flex-1 bg-primary text-primary-foreground border-0 font-display font-semibold"
               >
                 Looks Good! Save
               </Button>
@@ -281,9 +315,9 @@ const ImportPage = () => {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", bounce: 0.5 }}
-              className="w-20 h-20 rounded-full gradient-cool flex items-center justify-center"
+              className="w-20 h-20 rounded-full bg-success flex items-center justify-center"
             >
-              <Check className="w-10 h-10 text-secondary-foreground" />
+              <Check className="w-10 h-10 text-primary-foreground" />
             </motion.div>
             <h2 className="font-display text-2xl font-bold text-foreground">Recipe Saved! 🎉</h2>
             <p className="text-sm text-muted-foreground max-w-xs">
@@ -299,7 +333,7 @@ const ImportPage = () => {
               </Button>
               <Button
                 onClick={() => navigate("/")}
-                className="flex-1 gradient-warm text-primary-foreground border-0"
+                className="flex-1 bg-primary text-primary-foreground border-0"
               >
                 View Feed
               </Button>
