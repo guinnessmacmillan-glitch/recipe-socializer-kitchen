@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Link2, Upload, Share, Check, Edit3, Loader2, Play } from "lucide-react";
+import { ArrowLeft, Link2, Upload, Share, Check, Edit3, Loader2, Play, Clock, ChefHat, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MascotBubble from "@/components/MascotBubble";
-import { getRandomMascotMessage } from "@/lib/recipe-data";
+import { getRandomMascotMessage, recipes } from "@/lib/recipe-data";
 
 type Step = "input" | "processing" | "confirm" | "done";
 
@@ -16,30 +16,105 @@ const ImportPage = () => {
   const [editMode, setEditMode] = useState(false);
 
   const [extracted, setExtracted] = useState({
-    title: "Creamy Garlic Shrimp Pasta",
-    cookTime: "25 min",
+    title: "",
+    cookTime: "",
     difficulty: "Medium" as const,
-    ingredients: [
-      { name: "Shrimp", amount: "1 lb", confirmed: true },
-      { name: "Pasta", amount: "400g", confirmed: true },
-      { name: "Garlic", amount: "4 cloves", confirmed: true },
-      { name: "Heavy cream", amount: "1 cup", confirmed: true },
-      { name: "Parmesan", amount: "1/2 cup", confirmed: true },
-      { name: "Butter", amount: "2 tbsp", confirmed: false },
-    ],
-    steps: [
-      "Cook pasta al dente",
-      "Sauté shrimp with garlic in butter",
-      "Add heavy cream and simmer",
-      "Toss pasta with sauce",
-      "Top with parmesan and serve",
-    ],
+    ingredients: [] as { name: string; amount: string; confirmed: boolean }[],
+    steps: [] as string[],
+    tags: [] as string[],
   });
+
+  // Simulate AI analysis based on URL platform
+  const analyzeVideo = (videoUrl: string) => {
+    const platform = getPlatformFromUrl(videoUrl);
+
+    // Simulate different recipes based on the URL content
+    if (videoUrl.includes("pasta") || videoUrl.includes("garlic")) {
+      return {
+        title: "Creamy Garlic Shrimp Pasta",
+        cookTime: "25 min",
+        difficulty: "Medium" as const,
+        ingredients: [
+          { name: "Shrimp", amount: "1 lb", confirmed: true },
+          { name: "Pasta (fettuccine)", amount: "400g", confirmed: true },
+          { name: "Garlic", amount: "4 cloves", confirmed: true },
+          { name: "Heavy cream", amount: "1 cup", confirmed: true },
+          { name: "Parmesan cheese", amount: "1/2 cup", confirmed: true },
+          { name: "Butter", amount: "2 tbsp", confirmed: true },
+          { name: "Olive oil", amount: "1 tbsp", confirmed: true },
+          { name: "Red pepper flakes", amount: "1/2 tsp", confirmed: false },
+          { name: "Fresh parsley", amount: "2 tbsp", confirmed: false },
+        ],
+        steps: [
+          "Cook pasta al dente according to package directions, reserve 1 cup pasta water",
+          "Season shrimp with salt, pepper, and a pinch of red pepper flakes",
+          "Heat olive oil and butter in a large skillet over medium-high heat",
+          "Sauté shrimp 2 min per side until pink, then remove from pan",
+          "Add minced garlic to the pan and cook 30 seconds until fragrant",
+          "Pour in heavy cream and bring to a gentle simmer for 3 minutes",
+          "Toss in cooked pasta, shrimp, and parmesan cheese",
+          "Add pasta water a splash at a time until desired creaminess",
+          "Garnish with fresh parsley and extra parmesan, serve immediately",
+        ],
+        tags: ["Pasta", "Seafood", "Italian", "Creamy"],
+      };
+    }
+
+    // Default recipe for any video URL
+    return {
+      title: platform === "YouTube" ? "Ultimate Chicken Teriyaki Bowl" : "Crispy Korean Fried Chicken",
+      cookTime: platform === "YouTube" ? "30 min" : "45 min",
+      difficulty: "Medium" as const,
+      ingredients: platform === "YouTube" ? [
+        { name: "Chicken thighs", amount: "600g", confirmed: true },
+        { name: "Soy sauce", amount: "1/4 cup", confirmed: true },
+        { name: "Mirin", amount: "2 tbsp", confirmed: true },
+        { name: "Brown sugar", amount: "2 tbsp", confirmed: true },
+        { name: "Garlic", amount: "3 cloves", confirmed: true },
+        { name: "Ginger", amount: "1 inch", confirmed: true },
+        { name: "Steamed rice", amount: "2 cups", confirmed: true },
+        { name: "Sesame seeds", amount: "1 tbsp", confirmed: false },
+        { name: "Green onions", amount: "2 stalks", confirmed: false },
+      ] : [
+        { name: "Chicken wings", amount: "1 kg", confirmed: true },
+        { name: "Cornstarch", amount: "1 cup", confirmed: true },
+        { name: "Gochujang", amount: "3 tbsp", confirmed: true },
+        { name: "Soy sauce", amount: "2 tbsp", confirmed: true },
+        { name: "Honey", amount: "3 tbsp", confirmed: true },
+        { name: "Garlic", amount: "4 cloves", confirmed: true },
+        { name: "Rice vinegar", amount: "1 tbsp", confirmed: true },
+        { name: "Sesame oil", amount: "1 tsp", confirmed: false },
+      ],
+      steps: platform === "YouTube" ? [
+        "Cut chicken thighs into bite-sized pieces",
+        "Mix soy sauce, mirin, brown sugar, minced garlic, and grated ginger for the sauce",
+        "Heat oil in a pan over medium-high heat",
+        "Cook chicken pieces until golden brown, about 5-6 minutes",
+        "Pour teriyaki sauce over chicken and simmer until thickened",
+        "Serve over steamed rice",
+        "Garnish with sesame seeds and sliced green onions",
+      ] : [
+        "Pat chicken wings dry and season with salt and pepper",
+        "Coat wings generously in cornstarch, shaking off excess",
+        "Deep fry at 175°C for 10 minutes, then rest 5 minutes",
+        "Fry again at 190°C for 3-4 minutes until extra crispy",
+        "Mix gochujang, soy sauce, honey, garlic, and rice vinegar in a pan",
+        "Heat sauce until bubbling, then toss fried chicken in sauce",
+        "Finish with sesame oil and sesame seeds",
+        "Serve immediately while crispy",
+      ],
+      tags: platform === "YouTube" ? ["Japanese", "Bowl", "Teriyaki"] : ["Korean", "Fried", "Spicy"],
+    };
+  };
 
   const handleImport = () => {
     if (!url.trim()) return;
     setStep("processing");
-    setTimeout(() => setStep("confirm"), 2500);
+    setTimeout(() => {
+      const result = analyzeVideo(url);
+      setExtracted(result);
+      setStep("confirm");
+    }, 2500);
   };
 
   const handleConfirm = () => {
@@ -54,14 +129,29 @@ const ImportPage = () => {
   };
 
   const getVideoEmbedUrl = (url: string) => {
-    // YouTube
     const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
     if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
-    // For demo/mock URLs, return null
     return null;
   };
 
+  // Find similar recipes from our database based on shared ingredients
+  const getSimilarRecipes = () => {
+    if (extracted.ingredients.length === 0) return [];
+    const extractedNames = extracted.ingredients.map((i) => i.name.toLowerCase());
+    return recipes
+      .map((r) => {
+        const overlap = r.ingredients.filter((ing) =>
+          extractedNames.some((e) => ing.name.toLowerCase().includes(e) || e.includes(ing.name.toLowerCase()))
+        ).length;
+        return { recipe: r, overlap };
+      })
+      .filter((m) => m.overlap > 0)
+      .sort((a, b) => b.overlap - a.overlap)
+      .slice(0, 3);
+  };
+
   const embedUrl = getVideoEmbedUrl(url);
+  const similarRecipes = step === "confirm" ? getSimilarRecipes() : [];
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -154,26 +244,30 @@ const ImportPage = () => {
               </p>
             </div>
             <div className="w-full max-w-xs space-y-2 mt-4">
-              {["Detecting ingredients...", "Analyzing cooking steps...", "Estimating cook time..."].map(
-                (task, i) => (
+              {[
+                "Watching video content...",
+                "Detecting ingredients...",
+                "Analyzing cooking steps...",
+                "Estimating cook time...",
+                "Finding similar recipes...",
+              ].map((task, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.4 }}
+                  className="flex items-center gap-2 text-sm text-muted-foreground"
+                >
                   <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.8 }}
-                    className="flex items-center gap-2 text-sm text-muted-foreground"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: i * 0.4 + 0.3 }}
                   >
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: i * 0.8 + 0.6 }}
-                    >
-                      <Check className="w-4 h-4 text-success" />
-                    </motion.div>
-                    {task}
+                    <Check className="w-4 h-4 text-success" />
                   </motion.div>
-                )
-              )}
+                  {task}
+                </motion.div>
+              ))}
             </div>
           </motion.div>
         )}
@@ -186,8 +280,8 @@ const ImportPage = () => {
             exit={{ opacity: 0 }}
             className="px-4 space-y-4"
           >
-            {/* Embedded video at top */}
-            <div className="rounded-xl overflow-hidden border border-border bg-foreground">
+            {/* Embedded video */}
+            <div className="rounded-xl overflow-hidden border border-border bg-card">
               {embedUrl ? (
                 <iframe
                   src={embedUrl}
@@ -197,7 +291,7 @@ const ImportPage = () => {
                   title="Recipe video"
                 />
               ) : (
-                <div className="w-full aspect-video bg-foreground/5 flex flex-col items-center justify-center gap-2">
+                <div className="w-full aspect-video bg-secondary flex flex-col items-center justify-center gap-2">
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
                     <Play className="w-6 h-6 text-primary" />
                   </div>
@@ -209,15 +303,12 @@ const ImportPage = () => {
               )}
             </div>
 
+            {/* Confirmation prompt */}
             <div className="bg-card rounded-xl p-4 flex items-center gap-3 border border-border">
               <span className="text-2xl">🤔</span>
               <div>
-                <p className="text-sm font-display font-semibold text-foreground">
-                  Did we get this right?
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Review and edit before saving
-                </p>
+                <p className="text-sm font-display font-semibold text-foreground">Did we get this right?</p>
+                <p className="text-xs text-muted-foreground">Review and edit before saving</p>
               </div>
               <button
                 onClick={() => setEditMode(!editMode)}
@@ -227,7 +318,7 @@ const ImportPage = () => {
               </button>
             </div>
 
-            {/* Extracted recipe details */}
+            {/* Extracted recipe */}
             <div className="bg-card rounded-xl overflow-hidden border border-border">
               <div className="p-4 space-y-3">
                 <input
@@ -240,19 +331,24 @@ const ImportPage = () => {
                   <span>⏱ {extracted.cookTime}</span>
                   <span>👨‍🍳 {extracted.difficulty}</span>
                 </div>
+                {extracted.tags.length > 0 && (
+                  <div className="flex gap-1.5 flex-wrap">
+                    {extracted.tags.map((tag) => (
+                      <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {/* Ingredients */}
                 <div>
-                  <h4 className="text-xs font-display font-semibold text-foreground mb-1.5">
-                    Ingredients
-                  </h4>
+                  <h4 className="text-xs font-display font-semibold text-foreground mb-1.5">Ingredients</h4>
                   {extracted.ingredients.map((ing, i) => (
                     <div key={i} className="flex items-center gap-2 py-1">
                       <div
                         className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                          ing.confirmed
-                            ? "bg-success/20 text-success"
-                            : "bg-warning/20 text-warning"
+                          ing.confirmed ? "bg-success/20 text-success" : "bg-warning/20 text-warning"
                         }`}
                       >
                         {ing.confirmed ? "✓" : "?"}
@@ -268,9 +364,7 @@ const ImportPage = () => {
 
                 {/* Steps */}
                 <div>
-                  <h4 className="text-xs font-display font-semibold text-foreground mb-1.5">
-                    Steps
-                  </h4>
+                  <h4 className="text-xs font-display font-semibold text-foreground mb-1.5">How to Make It</h4>
                   {extracted.steps.map((s, i) => (
                     <div key={i} className="flex gap-2 py-1">
                       <span className="w-5 h-5 rounded-full bg-secondary text-foreground text-[10px] flex items-center justify-center flex-shrink-0 font-bold">
@@ -285,6 +379,44 @@ const ImportPage = () => {
                 </div>
               </div>
             </div>
+
+            {/* Similar recipes from database */}
+            {similarRecipes.length > 0 && (
+              <div>
+                <h4 className="text-xs font-display font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" /> Similar Recipes You Might Like
+                </h4>
+                <div className="space-y-2">
+                  {similarRecipes.map((match) => (
+                    <button
+                      key={match.recipe.id}
+                      onClick={() => navigate(`/recipe/${match.recipe.id}`)}
+                      className="w-full bg-card rounded-xl overflow-hidden border border-border flex items-center text-left hover:border-primary/30 transition-colors"
+                    >
+                      <img
+                        src={match.recipe.image}
+                        alt={match.recipe.title}
+                        className="w-16 h-16 object-cover flex-shrink-0"
+                      />
+                      <div className="p-3 flex-1 min-w-0">
+                        <h4 className="font-display font-semibold text-foreground text-sm truncate">{match.recipe.title}</h4>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <Clock className="w-3 h-3" /> {match.recipe.cookTime}
+                          </span>
+                          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <ChefHat className="w-3 h-3" /> {match.recipe.difficulty}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-success font-medium">
+                          {match.overlap} shared ingredients
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-3">
               <Button
@@ -321,7 +453,7 @@ const ImportPage = () => {
             </motion.div>
             <h2 className="font-display text-2xl font-bold text-foreground">Recipe Saved! 🎉</h2>
             <p className="text-sm text-muted-foreground max-w-xs">
-              Your recipe has been added to your collection and is now visible in the feed.
+              "{extracted.title}" has been added to your collection and is now visible in the feed.
             </p>
             <div className="flex gap-3 w-full">
               <Button
@@ -332,7 +464,7 @@ const ImportPage = () => {
                 Import Another
               </Button>
               <Button
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/feed")}
                 className="flex-1 bg-primary text-primary-foreground border-0"
               >
                 View Feed
