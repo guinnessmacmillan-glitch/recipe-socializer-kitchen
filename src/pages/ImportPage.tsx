@@ -1,19 +1,23 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Link2, Upload, Share, Check, Edit3, Loader2, Play, Clock, ChefHat, Sparkles } from "lucide-react";
+import { ArrowLeft, Link2, Upload, Share, Check, Edit3, Loader2, Play, Clock, ChefHat, Sparkles, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MascotBubble from "@/components/MascotBubble";
 import { getRandomMascotMessage, recipes } from "@/lib/recipe-data";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 type Step = "input" | "processing" | "confirm" | "done";
 
 const ImportPage = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [step, setStep] = useState<Step>("input");
   const [url, setUrl] = useState("");
   const [editMode, setEditMode] = useState(false);
+  const [error, setError] = useState("");
 
   const [extracted, setExtracted] = useState({
     title: "",
@@ -24,97 +28,32 @@ const ImportPage = () => {
     tags: [] as string[],
   });
 
-  // Simulate AI analysis based on URL platform
-  const analyzeVideo = (videoUrl: string) => {
-    const platform = getPlatformFromUrl(videoUrl);
-
-    // Simulate different recipes based on the URL content
-    if (videoUrl.includes("pasta") || videoUrl.includes("garlic")) {
-      return {
-        title: "Creamy Garlic Shrimp Pasta",
-        cookTime: "25 min",
-        difficulty: "Medium" as const,
-        ingredients: [
-          { name: "Shrimp", amount: "1 lb", confirmed: true },
-          { name: "Pasta (fettuccine)", amount: "400g", confirmed: true },
-          { name: "Garlic", amount: "4 cloves", confirmed: true },
-          { name: "Heavy cream", amount: "1 cup", confirmed: true },
-          { name: "Parmesan cheese", amount: "1/2 cup", confirmed: true },
-          { name: "Butter", amount: "2 tbsp", confirmed: true },
-          { name: "Olive oil", amount: "1 tbsp", confirmed: true },
-          { name: "Red pepper flakes", amount: "1/2 tsp", confirmed: false },
-          { name: "Fresh parsley", amount: "2 tbsp", confirmed: false },
-        ],
-        steps: [
-          "Cook pasta al dente according to package directions, reserve 1 cup pasta water",
-          "Season shrimp with salt, pepper, and a pinch of red pepper flakes",
-          "Heat olive oil and butter in a large skillet over medium-high heat",
-          "Sauté shrimp 2 min per side until pink, then remove from pan",
-          "Add minced garlic to the pan and cook 30 seconds until fragrant",
-          "Pour in heavy cream and bring to a gentle simmer for 3 minutes",
-          "Toss in cooked pasta, shrimp, and parmesan cheese",
-          "Add pasta water a splash at a time until desired creaminess",
-          "Garnish with fresh parsley and extra parmesan, serve immediately",
-        ],
-        tags: ["Pasta", "Seafood", "Italian", "Creamy"],
-      };
-    }
-
-    // Default recipe for any video URL
-    return {
-      title: platform === "YouTube" ? "Ultimate Chicken Teriyaki Bowl" : "Crispy Korean Fried Chicken",
-      cookTime: platform === "YouTube" ? "30 min" : "45 min",
-      difficulty: "Medium" as const,
-      ingredients: platform === "YouTube" ? [
-        { name: "Chicken thighs", amount: "600g", confirmed: true },
-        { name: "Soy sauce", amount: "1/4 cup", confirmed: true },
-        { name: "Mirin", amount: "2 tbsp", confirmed: true },
-        { name: "Brown sugar", amount: "2 tbsp", confirmed: true },
-        { name: "Garlic", amount: "3 cloves", confirmed: true },
-        { name: "Ginger", amount: "1 inch", confirmed: true },
-        { name: "Steamed rice", amount: "2 cups", confirmed: true },
-        { name: "Sesame seeds", amount: "1 tbsp", confirmed: false },
-        { name: "Green onions", amount: "2 stalks", confirmed: false },
-      ] : [
-        { name: "Chicken wings", amount: "1 kg", confirmed: true },
-        { name: "Cornstarch", amount: "1 cup", confirmed: true },
-        { name: "Gochujang", amount: "3 tbsp", confirmed: true },
-        { name: "Soy sauce", amount: "2 tbsp", confirmed: true },
-        { name: "Honey", amount: "3 tbsp", confirmed: true },
-        { name: "Garlic", amount: "4 cloves", confirmed: true },
-        { name: "Rice vinegar", amount: "1 tbsp", confirmed: true },
-        { name: "Sesame oil", amount: "1 tsp", confirmed: false },
-      ],
-      steps: platform === "YouTube" ? [
-        "Cut chicken thighs into bite-sized pieces",
-        "Mix soy sauce, mirin, brown sugar, minced garlic, and grated ginger for the sauce",
-        "Heat oil in a pan over medium-high heat",
-        "Cook chicken pieces until golden brown, about 5-6 minutes",
-        "Pour teriyaki sauce over chicken and simmer until thickened",
-        "Serve over steamed rice",
-        "Garnish with sesame seeds and sliced green onions",
-      ] : [
-        "Pat chicken wings dry and season with salt and pepper",
-        "Coat wings generously in cornstarch, shaking off excess",
-        "Deep fry at 175°C for 10 minutes, then rest 5 minutes",
-        "Fry again at 190°C for 3-4 minutes until extra crispy",
-        "Mix gochujang, soy sauce, honey, garlic, and rice vinegar in a pan",
-        "Heat sauce until bubbling, then toss fried chicken in sauce",
-        "Finish with sesame oil and sesame seeds",
-        "Serve immediately while crispy",
-      ],
-      tags: platform === "YouTube" ? ["Japanese", "Bowl", "Teriyaki"] : ["Korean", "Fried", "Spicy"],
-    };
-  };
-
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!url.trim()) return;
     setStep("processing");
-    setTimeout(() => {
-      const result = analyzeVideo(url);
-      setExtracted(result);
+    setError("");
+
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("analyze-video", {
+        body: { url: url.trim() },
+      });
+
+      if (fnError) throw new Error(fnError.message);
+      if (data?.error) throw new Error(data.error);
+      if (!data?.recipe) throw new Error("No recipe data returned");
+
+      setExtracted(data.recipe);
       setStep("confirm");
-    }, 2500);
+    } catch (e: any) {
+      console.error("Import error:", e);
+      setError(e.message || "Failed to analyze video");
+      toast({
+        title: "Analysis failed",
+        description: e.message || "Could not analyze the video. Please try again.",
+        variant: "destructive",
+      });
+      setStep("input");
+    }
   };
 
   const handleConfirm = () => {
@@ -134,7 +73,6 @@ const ImportPage = () => {
     return null;
   };
 
-  // Find similar recipes from our database based on shared ingredients
   const getSimilarRecipes = () => {
     if (extracted.ingredients.length === 0) return [];
     const extractedNames = extracted.ingredients.map((i) => i.name.toLowerCase());
@@ -155,7 +93,6 @@ const ImportPage = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
       <div className="px-4 py-3 flex items-center gap-3">
         <button onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5 text-foreground" />
@@ -174,6 +111,13 @@ const ImportPage = () => {
           >
             <MascotBubble message={getRandomMascotMessage("import")} />
 
+            {error && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 text-destructive text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
             <div className="space-y-3">
               <label className="text-sm font-display font-semibold text-foreground flex items-center gap-2">
                 <Link2 className="w-4 h-4 text-primary" /> Paste video link
@@ -189,11 +133,8 @@ const ImportPage = () => {
                   <button
                     key={p}
                     onClick={() => {
-                      if (p === "YouTube") {
-                        setUrl("https://youtube.com/watch?v=dQw4w9WgXcQ");
-                      } else {
-                        setUrl(`https://${p.toLowerCase()}.com/example`);
-                      }
+                      if (p === "YouTube") setUrl("https://youtube.com/watch?v=dQw4w9WgXcQ");
+                      else setUrl(`https://${p.toLowerCase()}.com/example`);
                     }}
                     className="text-xs px-3 py-1.5 rounded-full bg-muted text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                   >
@@ -219,7 +160,8 @@ const ImportPage = () => {
               disabled={!url.trim()}
               className="w-full bg-primary text-primary-foreground border-0 font-display font-semibold"
             >
-              Import Recipe
+              <Sparkles className="w-4 h-4 mr-2" />
+              Analyze with AI
             </Button>
           </motion.div>
         )}
@@ -237,31 +179,31 @@ const ImportPage = () => {
             </div>
             <div className="text-center space-y-2">
               <h2 className="font-display text-xl font-bold text-foreground">
-                Analyzing {getPlatformFromUrl(url)} Video
+                AI Analyzing {getPlatformFromUrl(url)} Video
               </h2>
               <p className="text-sm text-muted-foreground">
-                Extracting ingredients and cooking steps...
+                Using AI to extract ingredients and cooking steps...
               </p>
             </div>
             <div className="w-full max-w-xs space-y-2 mt-4">
               {[
-                "Watching video content...",
-                "Detecting ingredients...",
-                "Analyzing cooking steps...",
-                "Estimating cook time...",
+                "Sending to AI for analysis...",
+                "Identifying recipe type...",
+                "Extracting ingredients...",
+                "Building cooking steps...",
                 "Finding similar recipes...",
               ].map((task, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.4 }}
+                  transition={{ delay: i * 0.6 }}
                   className="flex items-center gap-2 text-sm text-muted-foreground"
                 >
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    transition={{ delay: i * 0.4 + 0.3 }}
+                    transition={{ delay: i * 0.6 + 0.4 }}
                   >
                     <Check className="w-4 h-4 text-success" />
                   </motion.div>
@@ -280,7 +222,6 @@ const ImportPage = () => {
             exit={{ opacity: 0 }}
             className="px-4 space-y-4"
           >
-            {/* Embedded video */}
             <div className="rounded-xl overflow-hidden border border-border bg-card">
               {embedUrl ? (
                 <iframe
@@ -303,11 +244,10 @@ const ImportPage = () => {
               )}
             </div>
 
-            {/* Confirmation prompt */}
             <div className="bg-card rounded-xl p-4 flex items-center gap-3 border border-border">
-              <span className="text-2xl">🤔</span>
+              <span className="text-2xl">🤖</span>
               <div>
-                <p className="text-sm font-display font-semibold text-foreground">Did we get this right?</p>
+                <p className="text-sm font-display font-semibold text-foreground">AI-Extracted Recipe</p>
                 <p className="text-xs text-muted-foreground">Review and edit before saving</p>
               </div>
               <button
@@ -318,7 +258,6 @@ const ImportPage = () => {
               </button>
             </div>
 
-            {/* Extracted recipe */}
             <div className="bg-card rounded-xl overflow-hidden border border-border">
               <div className="p-4 space-y-3">
                 <input
@@ -341,7 +280,6 @@ const ImportPage = () => {
                   </div>
                 )}
 
-                {/* Ingredients */}
                 <div>
                   <h4 className="text-xs font-display font-semibold text-foreground mb-1.5">Ingredients</h4>
                   {extracted.ingredients.map((ing, i) => (
@@ -362,7 +300,6 @@ const ImportPage = () => {
                   )}
                 </div>
 
-                {/* Steps */}
                 <div>
                   <h4 className="text-xs font-display font-semibold text-foreground mb-1.5">How to Make It</h4>
                   {extracted.steps.map((s, i) => (
@@ -380,11 +317,10 @@ const ImportPage = () => {
               </div>
             </div>
 
-            {/* Similar recipes from database */}
             {similarRecipes.length > 0 && (
               <div>
                 <h4 className="text-xs font-display font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" /> Similar Recipes You Might Like
+                  <Sparkles className="w-3.5 h-3.5 text-primary" /> Similar Recipes
                 </h4>
                 <div className="space-y-2">
                   {similarRecipes.map((match) => (
@@ -453,12 +389,12 @@ const ImportPage = () => {
             </motion.div>
             <h2 className="font-display text-2xl font-bold text-foreground">Recipe Saved! 🎉</h2>
             <p className="text-sm text-muted-foreground max-w-xs">
-              "{extracted.title}" has been added to your collection and is now visible in the feed.
+              "{extracted.title}" has been added to your collection.
             </p>
             <div className="flex gap-3 w-full">
               <Button
                 variant="outline"
-                onClick={() => { setStep("input"); setUrl(""); }}
+                onClick={() => { setStep("input"); setUrl(""); setError(""); }}
                 className="flex-1 border-border text-foreground"
               >
                 Import Another
