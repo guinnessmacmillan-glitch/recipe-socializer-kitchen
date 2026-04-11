@@ -1,160 +1,197 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { Heart, MessageCircle, Clock, ChefHat, Bookmark } from "lucide-react";
+import { Heart, X, Clock, ChefHat, Bookmark, ArrowLeft } from "lucide-react";
 import { recipes } from "@/lib/recipe-data";
+import { useToast } from "@/hooks/use-toast";
 
 const FeedPage = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
-  const [liked, setLiked] = useState<Record<string, boolean>>({});
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [exitDirection, setExitDirection] = useState<"left" | "right" | null>(null);
+  const [saved, setSaved] = useState<string[]>([]);
 
-  const swipeThreshold = 50;
+  const currentRecipe = recipes[currentIndex];
+  const isFinished = currentIndex >= recipes.length;
+
+  const handleSwipe = useCallback(
+    (dir: "left" | "right") => {
+      if (isFinished) return;
+      setExitDirection(dir);
+      if (dir === "right") {
+        setSaved((prev) => [...prev, currentRecipe.id]);
+        toast({
+          title: "Recipe saved! 🔖",
+          description: `${currentRecipe.title} added to your collection.`,
+        });
+      }
+      setTimeout(() => {
+        setCurrentIndex((prev) => prev + 1);
+        setExitDirection(null);
+      }, 300);
+    },
+    [currentIndex, isFinished, currentRecipe, toast]
+  );
 
   const handleDragEnd = (_: any, info: PanInfo) => {
-    if (info.offset.y < -swipeThreshold && currentIndex < recipes.length - 1) {
-      setDirection(-1);
-      setCurrentIndex((prev) => prev + 1);
-    } else if (info.offset.y > swipeThreshold && currentIndex > 0) {
-      setDirection(1);
-      setCurrentIndex((prev) => prev - 1);
+    if (Math.abs(info.offset.x) > 100) {
+      handleSwipe(info.offset.x > 0 ? "right" : "left");
     }
   };
 
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      if (e.deltaY > 30 && currentIndex < recipes.length - 1) {
-        setDirection(-1);
-        setCurrentIndex((prev) => prev + 1);
-      } else if (e.deltaY < -30 && currentIndex > 0) {
-        setDirection(1);
-        setCurrentIndex((prev) => prev - 1);
-      }
-    };
-
-    const el = containerRef.current;
-    if (el) el.addEventListener("wheel", handleWheel, { passive: false });
-    return () => { if (el) el.removeEventListener("wheel", handleWheel); };
-  }, [currentIndex]);
-
-  const recipe = recipes[currentIndex];
-
-  const variants = {
-    enter: (dir: number) => ({ y: dir > 0 ? "-100%" : "100%", opacity: 0 }),
-    center: { y: 0, opacity: 1 },
-    exit: (dir: number) => ({ y: dir > 0 ? "100%" : "-100%", opacity: 0 }),
-  };
+  if (isFinished) {
+    return (
+      <div className="h-[100dvh] flex flex-col items-center justify-center bg-background px-6 text-center gap-6">
+        <div className="text-6xl">🍽️</div>
+        <h2 className="font-display text-2xl font-bold text-foreground">No more recipes!</h2>
+        <p className="text-muted-foreground text-sm">
+          You saved {saved.length} recipe{saved.length !== 1 ? "s" : ""}. Check your profile to see them.
+        </p>
+        <button
+          onClick={() => { setCurrentIndex(0); setSaved([]); }}
+          className="px-6 py-2.5 rounded-full bg-primary text-primary-foreground font-display font-semibold text-sm"
+        >
+          Start Over
+        </button>
+        <button
+          onClick={() => navigate("/")}
+          className="text-sm text-muted-foreground underline"
+        >
+          Back to Home
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div ref={containerRef} className="h-[100dvh] w-full overflow-hidden bg-foreground relative">
+    <div className="h-[100dvh] w-full bg-background flex flex-col">
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-40 px-4 pt-3 pb-2 flex items-center justify-between">
-        <h1 className="font-display text-lg font-bold text-white">
-          Trending
-        </h1>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-white/60 font-medium">{currentIndex + 1}/{recipes.length}</span>
-        </div>
+      <div className="px-4 pt-3 pb-2 flex items-center justify-between flex-shrink-0">
+        <button onClick={() => navigate("/")}>
+          <ArrowLeft className="w-5 h-5 text-foreground" />
+        </button>
+        <h1 className="font-display text-lg font-bold text-foreground">Discover</h1>
+        <span className="text-xs text-muted-foreground font-medium">
+          {currentIndex + 1}/{recipes.length}
+        </span>
       </div>
 
-      {/* Swipeable Card */}
-      <AnimatePresence initial={false} custom={direction} mode="popLayout">
-        <motion.div
-          key={recipe.id}
-          custom={direction}
-          variants={variants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          drag="y"
-          dragConstraints={{ top: 0, bottom: 0 }}
-          dragElastic={0.2}
-          onDragEnd={handleDragEnd}
-          className="absolute inset-0 cursor-grab active:cursor-grabbing"
-        >
-          <img
-            src={recipe.image}
-            alt={recipe.title}
-            className="absolute inset-0 w-full h-full object-cover"
-            draggable={false}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
-
-          {/* Right action bar */}
-          <div className="absolute right-3 bottom-36 flex flex-col items-center gap-5 z-10">
-            <button
-              onClick={(e) => { e.stopPropagation(); setLiked(prev => ({ ...prev, [recipe.id]: !prev[recipe.id] })); }}
-              className="flex flex-col items-center gap-1"
-            >
-              <Heart className={`w-7 h-7 ${liked[recipe.id] ? "fill-red-500 text-red-500" : "text-white"}`} />
-              <span className="text-[11px] text-white font-medium">
-                {liked[recipe.id] ? recipe.likes + 1 : recipe.likes}
-              </span>
-            </button>
-            <div className="flex flex-col items-center gap-1">
-              <MessageCircle className="w-7 h-7 text-white" />
-              <span className="text-[11px] text-white font-medium">{recipe.comments}</span>
-            </div>
-            <button className="flex flex-col items-center gap-1">
-              <Bookmark className="w-7 h-7 text-white" />
-              <span className="text-[11px] text-white font-medium">Save</span>
-            </button>
+      {/* Card area */}
+      <div className="flex-1 relative px-4 pb-4 flex items-center justify-center overflow-hidden">
+        {/* Next card preview */}
+        {currentIndex + 1 < recipes.length && (
+          <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 rounded-3xl overflow-hidden h-[75%] scale-[0.92] opacity-50">
+            <img
+              src={recipes[currentIndex + 1].image}
+              alt=""
+              className="w-full h-full object-cover"
+            />
           </div>
+        )}
 
-          {/* Bottom info */}
-          <div
-            className="absolute bottom-20 left-0 right-14 p-4 z-10"
-            onClick={() => navigate(`/recipe/${recipe.id}`)}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-sm font-bold text-white">
-                {recipe.authorAvatar}
-              </div>
-              <span className="text-sm font-medium text-white">{recipe.author}</span>
-            </div>
-            <h2 className="font-display text-2xl font-bold text-white mb-2">{recipe.title}</h2>
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1 text-xs text-white/80">
-                <Clock className="w-3.5 h-3.5" /> {recipe.cookTime}
-              </span>
-              <span className="flex items-center gap-1 text-xs text-white/80">
-                <ChefHat className="w-3.5 h-3.5" /> {recipe.difficulty}
-              </span>
-            </div>
-            <div className="flex gap-1.5 mt-2">
-              {recipe.tags.map((tag) => (
-                <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-white/15 text-white/80">
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Swipe hint */}
-          {currentIndex === 0 && (
+        {/* Current card */}
+        <AnimatePresence>
+          {!exitDirection && (
             <motion.div
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[11px] text-white/40"
-              animate={{ y: [0, -6, 0] }}
-              transition={{ repeat: Infinity, duration: 1.5 }}
+              key={currentRecipe.id}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1, x: 0, rotate: 0 }}
+              exit={{
+                x: exitDirection === "right" ? 400 : -400,
+                rotate: exitDirection === "right" ? 15 : -15,
+                opacity: 0,
+              }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.8}
+              onDragEnd={handleDragEnd}
+              className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-[75%] rounded-3xl overflow-hidden cursor-grab active:cursor-grabbing shadow-xl"
+              style={{ touchAction: "none" }}
+              onClick={() => navigate(`/recipe/${currentRecipe.id}`)}
             >
-              Swipe up for more
+              <img
+                src={currentRecipe.image}
+                alt={currentRecipe.title}
+                className="absolute inset-0 w-full h-full object-cover"
+                draggable={false}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+
+              {/* Swipe indicators */}
+              <motion.div
+                className="absolute top-6 left-6 px-4 py-2 rounded-xl border-2 border-destructive bg-destructive/20 rotate-[-15deg]"
+                style={{ opacity: 0 }}
+                drag={false}
+              >
+                <span className="text-destructive font-bold text-xl">NOPE</span>
+              </motion.div>
+              <motion.div
+                className="absolute top-6 right-6 px-4 py-2 rounded-xl border-2 border-success bg-success/20 rotate-[15deg]"
+                style={{ opacity: 0 }}
+                drag={false}
+              >
+                <span className="text-success font-bold text-xl">SAVE</span>
+              </motion.div>
+
+              {/* Author */}
+              <div className="absolute top-4 left-4 flex items-center gap-2 z-10">
+                <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-sm font-bold text-white">
+                  {currentRecipe.authorAvatar}
+                </div>
+                <span className="text-sm font-medium text-white drop-shadow">{currentRecipe.author}</span>
+              </div>
+
+              {/* Bottom info */}
+              <div className="absolute bottom-0 left-0 right-0 p-5 z-10">
+                <h2 className="font-display text-2xl font-bold text-white mb-2 drop-shadow">
+                  {currentRecipe.title}
+                </h2>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="flex items-center gap-1 text-xs text-white/80">
+                    <Clock className="w-3.5 h-3.5" /> {currentRecipe.cookTime}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs text-white/80">
+                    <ChefHat className="w-3.5 h-3.5" /> {currentRecipe.difficulty}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs text-white/80">
+                    <Heart className="w-3.5 h-3.5" /> {currentRecipe.likes.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex gap-1.5">
+                  {currentRecipe.tags.map((tag) => (
+                    <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-white/15 text-white/80">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </motion.div>
           )}
-        </motion.div>
-      </AnimatePresence>
+        </AnimatePresence>
+      </div>
 
-      {/* Dot indicators */}
-      <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-40">
-        {recipes.map((_, i) => (
-          <div
-            key={i}
-            className={`w-1 rounded-full transition-all duration-200 ${i === currentIndex ? "h-4 bg-white" : "h-1 bg-white/30"}`}
-          />
-        ))}
+      {/* Action buttons */}
+      <div className="flex items-center justify-center gap-6 pb-6 flex-shrink-0">
+        <button
+          onClick={() => handleSwipe("left")}
+          className="w-14 h-14 rounded-full bg-card border border-border flex items-center justify-center shadow-md active:scale-90 transition-transform"
+        >
+          <X className="w-7 h-7 text-destructive" />
+        </button>
+        <button
+          onClick={() => navigate(`/recipe/${currentRecipe.id}`)}
+          className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center shadow-md active:scale-90 transition-transform"
+        >
+          <ChefHat className="w-5 h-5 text-foreground" />
+        </button>
+        <button
+          onClick={() => handleSwipe("right")}
+          className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-md active:scale-90 transition-transform"
+        >
+          <Bookmark className="w-7 h-7 text-primary-foreground" />
+        </button>
       </div>
     </div>
   );
