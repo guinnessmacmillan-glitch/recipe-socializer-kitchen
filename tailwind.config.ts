@@ -57,6 +57,15 @@ export default {
           foreground: "hsl(var(--warning-foreground))",
         },
         success: "hsl(var(--success))",
+        warm: {
+          DEFAULT: "hsl(var(--warm))",
+          foreground: "hsl(var(--warm-foreground))",
+          muted: "hsl(var(--warm-muted))",
+        },
+        earth: {
+          DEFAULT: "hsl(var(--earth))",
+          light: "hsl(var(--earth-light))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

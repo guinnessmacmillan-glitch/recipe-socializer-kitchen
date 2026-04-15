@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/hooks/use-theme";
+import { SavedRecipesProvider } from "@/hooks/use-saved-recipes";
 import BottomNav from "@/components/BottomNav";
 import HomePage from "./pages/HomePage";
 import FeedPage from "./pages/FeedPage";
@@ -18,24 +19,26 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <div className="max-w-lg mx-auto relative">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/feed" element={<FeedPage />} />
-              <Route path="/recipe/:id" element={<RecipeDetailPage />} />
-              <Route path="/import" element={<ImportPage />} />
-              <Route path="/scan" element={<ScanPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <BottomNav />
-          </div>
-        </BrowserRouter>
-      </TooltipProvider>
+      <SavedRecipesProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <div className="max-w-lg mx-auto relative">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/feed" element={<FeedPage />} />
+                <Route path="/recipe/:id" element={<RecipeDetailPage />} />
+                <Route path="/import" element={<ImportPage />} />
+                <Route path="/scan" element={<ScanPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <BottomNav />
+            </div>
+          </BrowserRouter>
+        </TooltipProvider>
+      </SavedRecipesProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
